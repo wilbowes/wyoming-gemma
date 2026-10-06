@@ -1,0 +1,12 @@
+version: 2
+# Only the actions. The image's base and Python pins are the versions that
+# were run and are moved by hand.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
