@@ -1,0 +1,14 @@
+# Speech-to-text for Home Assistant Assist from Gemma 4's audio input.
+# No GPU here: the llama-server you already run does the work.
+services:
+  wyoming-gemma:
+    build: .
+    image: wyoming-gemma
+    container_name: wyoming-gemma
+    restart: unless-stopped
+    ports:
+      - "10302:10302"
+    # Where llama-server listens, as seen from inside this container.
+    command: --gemma-url ${GEMMA_URL:-http://host.docker.internal:8000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
