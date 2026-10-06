@@ -2,8 +2,8 @@
 # No GPU here: the llama-server you already run does the work.
 services:
   wyoming-gemma:
+    image: ghcr.io/wilbowes/wyoming-gemma:latest
     build: .
-    image: wyoming-gemma
     container_name: wyoming-gemma
     restart: unless-stopped
     ports:

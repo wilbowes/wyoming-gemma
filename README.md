@@ -72,12 +72,27 @@ llama-server --model gemma-4-12B-it-qat-UD-Q4_K_XL.gguf --mmproj mmproj-BF16.ggu
 ## Run
 
 ```
-git clone https://github.com/wilbowes/wyoming-gemma && cd wyoming-gemma
-GEMMA_URL=http://192.168.1.10:8000 docker compose up -d --build
+docker run -d --name wyoming-gemma --restart unless-stopped -p 10302:10302 \
+  ghcr.io/wilbowes/wyoming-gemma:latest --gemma-url http://192.168.1.10:8000
 ```
 
-`GEMMA_URL` is where `llama-server` listens. Left unset, it is port 8000 on
-the Docker host.
+`--gemma-url` is where `llama-server` listens, as seen from inside the
+container, so use the machine's address and not `127.0.0.1`. The image is
+built for linux/amd64 and linux/arm64, and versions are tagged (`:0.2.0`).
+
+Or with the compose file in this repository, which defaults to port 8000 on
+the Docker host when `GEMMA_URL` is unset:
+
+```
+git clone https://github.com/wilbowes/wyoming-gemma && cd wyoming-gemma
+docker compose pull
+GEMMA_URL=http://192.168.1.10:8000 docker compose up -d
+```
+
+To build it yourself, use `docker compose up -d --build`.
+
+Each image carries a build-provenance attestation:
+`gh attestation verify oci://ghcr.io/wilbowes/wyoming-gemma:0.2.0 --repo wilbowes/wyoming-gemma`.
 
 In Home Assistant: Settings → Devices & services → Add integration →
 **Wyoming Protocol**, with this machine's address and port `10302`. Then pick
