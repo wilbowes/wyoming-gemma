@@ -46,10 +46,11 @@ def tone(seconds=1.0, rate=16000, channels=1, amplitude=8000):
                     for i in range(n))
 
 
-def ask(url, pcm, rate=16000, channels=1, min_rms=100):
+def ask(url, pcm, rate=16000, channels=1, min_rms=100, language="en", max_seconds=30, languages=("en",)):
     """One Home Assistant request; returns the transcript text."""
     async def run():
-        args = SimpleNamespace(gemma_url=url, min_rms=min_rms, timeout=5)
+        args = SimpleNamespace(gemma_url=url, min_rms=min_rms, timeout=5, max_seconds=max_seconds,
+                               languages=list(languages), model_name="gemma-test")
         server = AsyncServer.from_uri("tcp://127.0.0.1:0")
         await server.start(lambda *a, **kw: shim.Handler(Info(), args, *a, **kw))
         port = server._server.sockets[0].getsockname()[1]
@@ -57,7 +58,7 @@ def ask(url, pcm, rate=16000, channels=1, min_rms=100):
             async with AsyncTcpClient("127.0.0.1", port) as c:
                 await c.write_event(Describe().event())
                 assert (await c.read_event()).type == "info"
-                await c.write_event(Transcribe(language="en").event())
+                await c.write_event(Transcribe(language=language).event())
                 await c.write_event(AudioStart(rate=rate, width=2, channels=channels).event())
                 step = 2048 * channels
                 for i in range(0, len(pcm), step):
@@ -87,6 +88,62 @@ def test_transcript_is_returned_and_the_request_is_shaped_as_gemma_needs():
     assert req["chat_template_kwargs"] == {"enable_thinking": False}
     assert req["temperature"] == 0.0
     assert sent_wav(req) == (16000, 1, 2, 16000)
+
+
+def prompt(request):
+    return request["messages"][1]["content"][0]["text"]
+
+
+def test_the_english_prompt_is_the_one_that_was_measured():
+    assert shim.ask("en") == ("Transcribe exactly what is said in this audio. "
+                              "The speaker speaks English. Reply with the words only.")
+
+
+@pytest.mark.parametrize("language, expected", [
+    ("fr", "The speaker speaks French."), ("fr-FR", "The speaker speaks French."),
+    ("en-GB", "The speaker speaks English."), ("pt_BR", "The speaker speaks Portuguese."),
+    ("ZH-cn", "The speaker speaks Chinese.")])
+def test_the_language_home_assistant_names_is_the_one_in_the_prompt(language, expected):
+    llama = Llama(["x"])
+    ask(llama.url, tone(), language=language)
+    assert expected in prompt(llama.requests[0])
+
+
+def test_an_unlisted_language_is_transcribed_with_none_named():
+    llama = Llama(["x"])
+    ask(llama.url, tone(), language="tlh")
+    assert prompt(llama.requests[0]) == "Transcribe exactly what is said in this audio. Reply with the words only."
+
+
+def test_a_request_naming_no_language_uses_the_first_offered():
+    llama = Llama(["x"])
+    ask(llama.url, tone(), language=None, languages=("de", "en"))
+    assert "The speaker speaks German." in prompt(llama.requests[0])
+
+
+def test_a_retry_after_a_refusal_keeps_the_language():
+    llama = Llama(["I'm unable to hear audio.", "quelle heure est-il"])
+    assert ask(llama.url, tone(), language="fr") == "quelle heure est-il"
+    assert all("French" in prompt(r) for r in llama.requests)
+
+
+@pytest.mark.parametrize("seconds", [1.0, 1.5])
+def test_audio_past_max_seconds_is_dropped_not_buffered(seconds):
+    llama = Llama(["x"])
+    ask(llama.url, tone(3.0), max_seconds=seconds)
+    assert sent_wav(llama.requests[0])[3] == int(seconds * 16000)
+
+
+def test_audio_under_max_seconds_is_sent_whole():
+    llama = Llama(["x"])
+    ask(llama.url, tone(2.0), max_seconds=30)
+    assert sent_wav(llama.requests[0])[3] == 32000
+
+
+def test_the_offered_languages_and_model_name_are_what_was_configured():
+    args = SimpleNamespace(languages=["en", "fr"], model_name="gemma-4-27B")
+    model = shim.make_info(args).asr[0].models[0]
+    assert (model.name, model.languages) == ("gemma-4-27B", ["en", "fr"])
 
 
 def test_any_input_format_reaches_gemma_as_16k_mono():

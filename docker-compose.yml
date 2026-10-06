@@ -9,6 +9,7 @@ services:
     ports:
       - "10302:10302"
     # Where llama-server listens, as seen from inside this container.
+    # Add --languages en fr de … to offer more than English.
     command: --gemma-url ${GEMMA_URL:-http://host.docker.internal:8000}
     extra_hosts:
       - "host.docker.internal:host-gateway"

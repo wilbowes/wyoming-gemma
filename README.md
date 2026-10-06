@@ -20,10 +20,13 @@ gemma-4-12B-it (QAT, Q4_K_XL) on an RTX 5060 Ti: 20 of 22 clear requests
 transcribed the same as faster-whisper `distil-large-v3`, at about 250 ms a
 clip. That is one room, one model and a small sample.
 
-Limits:
+Other languages: the figures above are English. Three synthesised French
+sentences came back in French, two of them word for word and one with a
+single wrong word ("Mais" for "Mets"), and the result was the same whether
+the prompt named French or English. Nothing else has been tried.
 
-- **English only.** The prompt says the speaker speaks English and the server
-  advertises `en`. Both are in `shim.py`.
+How it fails:
+
 - A clip quieter than `--min-rms` (default 100) returns an empty transcript
   without asking the model, because Gemma invents words for near-silence.
 - If Gemma answers about the request ("I'm unable to hear audio") the shim
@@ -31,6 +34,7 @@ Limits:
   refuses again.
 - If `llama-server` is down or slow (`--timeout`, default 15 s), Home
   Assistant gets an empty transcript.
+- Audio past `--max-seconds` (default 30) is dropped.
 
 ## Requirements
 
@@ -56,7 +60,20 @@ In Home Assistant: Settings → Devices & services → Add integration →
 **Wyoming Protocol**, with this machine's address and port `10302`. Then pick
 `gemma-audio` as the speech-to-text of your Assist pipeline.
 
-Each request is logged with its length, level, time taken and transcript:
+## Options
+
+Set them on `command:` in `docker-compose.yml`.
+
+| Option | Default | |
+|---|---|---|
+| `--gemma-url` | `http://127.0.0.1:8000` | where `llama-server` listens |
+| `--languages` | `en` | the languages offered to Home Assistant, e.g. `--languages en fr de`. A pipeline can only pick this engine in a language listed here. Each request is transcribed in the language Home Assistant names for it. |
+| `--model-name` | `gemma-4-12B` | the model's name as Home Assistant shows it |
+| `--min-rms` | `100` | clips quieter than this are treated as silence |
+| `--max-seconds` | `30` | audio kept per request |
+| `--timeout` | `15` | seconds to wait for `llama-server` |
+
+Each request is logged with its length, level, time taken, language and transcript:
 `docker logs -f wyoming-gemma`.
 
 ## Comparing against whisper
@@ -73,7 +90,8 @@ HOST=192.168.1.10 python3 compare.py 25
 
 `tests/test_shim.py` drives the shim over Wyoming against a scripted stand-in
 for `llama-server`: the request shape, resampling, silence, refusals, leaked
-control tokens and a server that is down.
+control tokens, a server that is down, the language named per request and
+the audio cap.
 
 ```
 pip install pytest wyoming==1.8.0 && python -m pytest tests/
