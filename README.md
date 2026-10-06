@@ -25,7 +25,8 @@ clip. That is one room, one model and a small sample.
 English is what it has been used for. For a first look at the rest, two
 short commands in each of 20 languages were synthesised with Piper and sent
 through the shim. Whisper `large-v3-turbo` heard the same clips as a check on
-the clips themselves, and got all 40 right or within a word or two.
+the clips themselves, and got 35 of the 40 right or one word off. Persian
+and Swahili were its worst, so those two voices may be poor.
 
 | Gemma's transcripts | Languages |
 |---|---|
