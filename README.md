@@ -20,10 +20,32 @@ gemma-4-12B-it (QAT, Q4_K_XL) on an RTX 5060 Ti: 20 of 22 clear requests
 transcribed the same as faster-whisper `distil-large-v3`, at about 250 ms a
 clip. That is one room, one model and a small sample.
 
-Other languages: the figures above are English. Three synthesised French
-sentences came back in French, two of them word for word and one with a
-single wrong word ("Mais" for "Mets"), and the result was the same whether
-the prompt named French or English. Nothing else has been tried.
+### Other languages
+
+English is what it has been used for. For a first look at the rest, two
+short commands in each of 20 languages were synthesised with Piper and sent
+through the shim. Whisper `large-v3-turbo` heard the same clips as a check on
+the clips themselves, and got all 40 right or within a word or two.
+
+| Gemma's transcripts | Languages |
+|---|---|
+| Both exact | German, Spanish, Portuguese, Russian, Arabic, Hindi |
+| One exact, one with an error | Italian, Chinese, Turkish, Indonesian |
+| Close, with a wrong word | Dutch, Polish, Ukrainian |
+| Both wrong | Swedish, Finnish, Hungarian, Greek, Persian, Vietnamese, Swahili |
+
+French, tried separately on three sentences, was two exact and one with a
+wrong word.
+
+A wrong word can be the opposite command: the Ukrainian for "turn on" came
+back as "turn off". This is 40 clean synthetic clips on gemma-4-12B, so read
+it as where to start testing, and try your own voice before relying on a
+language.
+
+Naming the language matters outside the first row. With English named in the
+prompt, the languages in the last two rows mostly came back as an English
+sentence, as another language, or as a refusal. That is why each request is
+transcribed in the language Home Assistant names for it.
 
 How it fails:
 
